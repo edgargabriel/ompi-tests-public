@@ -1,0 +1,63 @@
+!
+! Contents of this file was created by claude/sonnet from
+! the corresponding C MPI test originally distributed as part of the
+! MESSAGE PASSING INTERFACE TEST CASE SUITE  Copyright IBM Corp. 1995
+!
+
+      program gather_f08
+      use mpi_f08
+      implicit none
+
+      integer, parameter :: MAXLEN = 10000
+      integer, allocatable :: out(:), in(:)
+      integer :: i, j, k, root
+      integer :: myself, tasks, ierr
+      integer :: alloc_stat
+
+      call MPI_Init(ierr)
+      call MPI_Comm_rank(MPI_COMM_WORLD, myself, ierr)
+      call MPI_Comm_size(MPI_COMM_WORLD, tasks, ierr)
+
+      ! Allocate arrays
+      allocate(in(MAXLEN * tasks), out(MAXLEN * tasks), stat=alloc_stat)
+      if (alloc_stat /= 0) then
+         write(*,*) 'ERROR: Rank ', myself, ' was not able to allocate enough memory.'
+         call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
+      end if
+
+      j = 1
+      root = 0
+      do while (j <= MAXLEN)
+         ! Initialize output array
+         do i = 1, j
+            out(i) = i - 1  ! Fortran arrays are 1-based, so subtract 1 to match C
+         end do
+
+         ! Perform gather operation
+         call MPI_Gather(out, j, MPI_INTEGER, in, j, MPI_INTEGER, root, MPI_COMM_WORLD, ierr)
+
+         ! Check results on root process
+         if (myself == root) then
+            do i = 0, tasks - 1
+               do k = 0, j - 1
+                  if (in(i*j + k + 1) /= k) then  ! +1 for Fortran 1-based indexing
+                     write(*,'(A,I0,A,I0,A,I0,A,I0,A,I0)') &
+                        'ERROR: bad answer (', in(i*j + k + 1), ') at index ', i*j+k, &
+                        ' of ', j*tasks, ' (should be ', k, ') on rank ', myself
+                     call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
+                  end if
+               end do
+            end do
+         end if
+
+         j = j * 10
+         root = mod(root + 1, tasks)
+      end do
+
+      call MPI_Barrier(MPI_COMM_WORLD, ierr)
+      call MPI_Finalize(ierr)
+
+      ! Clean up
+      deallocate(in, out)
+
+      end program gather_f08

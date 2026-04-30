@@ -33,6 +33,15 @@ collective-big-count/test_scatter
 collective-big-count/test_scatterv
 collective-big-count/*_uniform_count
 
+fortran/configure
+fortran/Makefile
+fortran/Makefile.in
+fortran/collectives/Makefile
+fortran/collectives/Makefile.in
+fortran/collectives/*.o
+fortran/collectives/*_f08
+fortran/collectives/*_f90
+
 comm_split_type/cmsplit_type
 
 singleton/hello_c

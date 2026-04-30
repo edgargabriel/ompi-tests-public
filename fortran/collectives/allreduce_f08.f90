@@ -1,0 +1,50 @@
+!
+! Contents of this file was created by claude/sonnet from
+! the corresponding C MPI test originally distributed as part of the
+! MESSAGE PASSING INTERFACE TEST CASE SUITE  Copyright IBM Corp. 1995
+!
+
+program allreduce_test
+   use mpi_f08
+   implicit none
+
+   integer, parameter :: MAXLEN = 100000
+   integer, allocatable :: out(:), in(:)
+   integer :: i, j, k
+   integer :: myself, tasks
+   integer :: ierr
+
+   call MPI_Init(ierr)
+   call MPI_Comm_rank(MPI_COMM_WORLD, myself, ierr)
+   call MPI_Comm_size(MPI_COMM_WORLD, tasks, ierr)
+
+   allocate(in(MAXLEN), out(MAXLEN), stat=ierr)
+   if (ierr /= 0) then
+      write(*,*) "Doh!  Rank ", myself, " was not able to allocate enough memory.  MPI test aborted!"
+      call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
+   end if
+
+   j = 1
+   do while (j <= MAXLEN)
+      do i = 1, j
+         out(i) = i - 1
+      end do
+
+      call MPI_Allreduce(out, in, j, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD, ierr)
+
+      do k = 1, j
+         if (in(k) /= (k - 1) * tasks) then
+            write(*,*) "bad answer (", in(k), ") at index ", k - 1, " of ", j, " (should be ", (k - 1) * tasks, ")"
+            call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
+         end if
+      end do
+
+      j = j * 10
+   end do
+
+   deallocate(in, out)
+
+   call MPI_Barrier(MPI_COMM_WORLD, ierr)
+   call MPI_Finalize(ierr)
+
+end program allreduce_test
