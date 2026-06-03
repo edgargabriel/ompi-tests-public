@@ -1,0 +1,49 @@
+!
+! Contents of this file was created by claude/sonnet from
+! the corresponding C MPI test originally distributed as part of the
+! MESSAGE PASSING INTERFACE TEST CASE SUITE  Copyright IBM Corp. 1995
+!
+
+program scan_init_test
+    use mpi_f08
+    implicit none
+
+    integer, parameter :: MAXLEN = 10000
+    integer :: out(MAXLEN), in(MAXLEN)
+    integer :: i, j, k
+    integer :: myself, tasks
+    integer :: ierr
+    type(MPI_Request) :: request
+    character(len=256) :: error_msg
+
+    call MPI_Init(ierr)
+    call MPI_Comm_rank(MPI_COMM_WORLD, myself, ierr)
+    call MPI_Comm_size(MPI_COMM_WORLD, tasks, ierr)
+
+    j = 1
+    do while (j <= MAXLEN)
+        do i = 1, j
+            out(i) = i - 1
+        end do
+
+        call MPI_Scan_init(out, in, j, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD, MPI_INFO_NULL, request, ierr)
+        call MPI_Start(request, ierr)
+        call MPI_Wait(request, MPI_STATUS_IGNORE, ierr)
+        call MPI_Request_free(request, ierr)
+
+        do k = 1, j
+            if (in(k) /= (k - 1) * (myself + 1)) then
+                write(error_msg, '(A,I0,A,I0,A,I0,A,I0,A)') &
+                    'bad answer (', in(k), ') at index ', k, &
+                    ' of ', j, ' (should be ', (k - 1) * (myself + 1), ')'
+                call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
+            end if
+        end do
+
+        j = j * 10
+    end do
+
+    call MPI_Barrier(MPI_COMM_WORLD, ierr)
+    call MPI_Finalize(ierr)
+
+end program scan_init_test
